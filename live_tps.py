@@ -1,6 +1,7 @@
 """Passive server-log telemetry: no inference requests or server changes."""
 import json
 import math
+import os
 import re
 import shlex
 import subprocess
@@ -32,6 +33,18 @@ def parse(line, at):
 
 
 def poll(source, offset):
+    host=source.get('ssh_host')
+    if not host or host in ('local','localhost'):
+        # Local log file (same offset/partial-line handling as the remote reader).
+        path=source['log_path']
+        size=os.path.getsize(path)
+        if offset<0:offset=size
+        if offset>size:offset=0
+        with open(path,'rb') as f:
+            f.seek(offset);data=f.read(262144)
+        end=data.rfind(b'\n')+1
+        lines=data[:end].decode('utf-8','replace').splitlines()
+        return offset+end,[s for line in lines if (s:=parse(line,time.time()))]
     command='python3 -c '+shlex.quote(REMOTE)+' '+shlex.quote(source['log_path'])+' '+str(offset)
     result=subprocess.run(['ssh','-o','BatchMode=yes','-o','ConnectTimeout=3',source['ssh_host'],command],capture_output=True,text=True,timeout=5,check=True)
     doc=json.loads(result.stdout)
@@ -147,4 +160,5 @@ if __name__=='__main__':
         import endpoint_telemetry
         endpoint_telemetry.collect(args.root,job,source,follow_manifest=True)
     else:
-        parser.error('Standalone attachment supports HTTP and LM Studio telemetry; legacy SSH logs are collected by the controller.')
+        # Legacy log reader (remote SSH or local file).
+        collect(args.root,job,threading.Condition())
