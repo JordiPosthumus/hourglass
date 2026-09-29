@@ -3,7 +3,7 @@ sys.path.insert(0,str(pathlib.Path(__file__).resolve().parents[1]))
 from http.server import HTTPServer,BaseHTTPRequestHandler
 import harness_runner
 requests=[]
-steps=[('write',{'path':'proof.txt','content':'before'}),('edit',{'path':'proof.txt','edits':[{'oldText':'before','newText':'after'}]}),('read',{'path':'proof.txt'}),('read',{'path':'/etc/passwd'}),('bash',{'command':'cat proof.txt','timeout':0.001}),('answer_question',{'option':'001'})]
+steps=[('write',{'path':'proof.txt','content':'before'}),('edit',{'path':'proof.txt','edits':[{'oldText':'before','newText':'after'}]}),('read',{'path':'proof.txt'}),('read',{'path':'/etc/passwd'}),('bash',{'command':'mkdir -p work && printf relative > work/scratch.txt && test "$TMPDIR" = "$PWD" && printf temporary > "$TMPDIR/scratch.txt" && cat proof.txt','timeout':0.001}),('answer_question',{'option':'001'})]
 class H(BaseHTTPRequestHandler):
  def log_message(self,*a):pass
  def do_GET(self):
@@ -22,6 +22,13 @@ with tempfile.TemporaryDirectory() as d:
   print(json.dumps({'metrics':metrics,'answer':answer,'requests':len(requests)}))
   assert answer=={'option':'001'}
   assert (pathlib.Path(d)/'proof.txt').read_text()=='after'
+  assert (pathlib.Path(d)/'work/scratch.txt').read_text()=='relative'
+  assert (pathlib.Path(d)/'scratch.txt').read_text()=='temporary'
+  system_text='\n'.join(m['content'] for m in requests[0]['messages'] if m['role'] in ('system','developer'))
+  assert 'Create scratch scripts and temporary files inside the current workspace' in system_text
+  assert 'work/sim.py after mkdir -p work' in system_text
+  assert '"$TMPDIR/sim.py"' in system_text
+  assert 'Do not use absolute /tmp or /private/tmp paths' in system_text
   events=[i['event'] for i in trace if 'event' in i]
   results=[e for e in events if e['type']=='tool_execution_end']
   assert not results[0].get('isError') and not results[1].get('isError')

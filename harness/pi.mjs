@@ -39,7 +39,7 @@ const loader=new DefaultResourceLoader({cwd,agentDir,settingsManager,noExtension
    if(['read','write','edit'].includes(e.toolName))e.input.path=guard(e.input.path,e.toolName==='read');
    if(e.toolName==='bash'){
      if(!nativePi)delete e.input.timeout;
-     if(input.sandboxProfile)e.input.command='/usr/bin/sandbox-exec -p '+quote(input.sandboxProfile)+' /usr/bin/env -i PATH='+quote(process.env.PATH)+' HOME='+quote(cwd)+' /bin/bash -c '+quote(e.input.command);
+     if(input.sandboxProfile)e.input.command='/usr/bin/sandbox-exec -p '+quote(input.sandboxProfile)+' /usr/bin/env -i PATH='+quote(process.env.PATH)+' HOME='+quote(cwd)+' TMPDIR='+quote(cwd)+' /bin/bash -c '+quote(e.input.command);
    }
  });
 }]});

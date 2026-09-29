@@ -92,7 +92,13 @@ def run(task,cfg,workdir,sandboxed):
             provider['models']=[stock_pi.model_definition(cfg,context)]
         (agent_dir/'models.json').write_text(json.dumps({'providers':{'benchmark':provider}}))
         payload={'cwd':str(workdir),'agentDir':private,'model':cfg,'prompt':prompt+'\n\nCall '+final+' when finished.','images':images,
-                 'instructions':(scoring_instructions+' ' if scoring_instructions else '')+'Work on exactly this benchmark question. Use the workspace tools as needed. Network access is unavailable. Finish by calling '+final+'.',
+                 'instructions':(scoring_instructions+' ' if scoring_instructions else '')+
+                     'Work on exactly this benchmark question. Use the workspace tools as needed. '
+                     'Create scratch scripts and temporary files inside the current workspace: use relative paths '
+                     '(for example, work/sim.py after mkdir -p work) or "$TMPDIR/sim.py". '
+                     'TMPDIR points to the workspace. Do not use absolute /tmp or /private/tmp paths; '
+                     'those are outside the workspace and may be blocked. '
+                     'Network access is unavailable. Finish by calling '+final+'.',
                  'finalTool':final,'answerDescription':'Submit the final benchmark answer.',
                  'answerSchema':answer_schema,
                  'sandboxProfile':hourglass.sandbox_profile(workdir,sandboxed)}
